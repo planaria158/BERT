@@ -15,7 +15,7 @@ model_params:
   lr_gamma: 0.9985  # for exponential learning rate decay
   betas : [0.9, 0.95]
   accelerator: 'gpu'
-  devices: 1
+  devices: 2
   batch_size: 256
   num_workers: 20
   grad_norm_clip : 1.0
@@ -25,7 +25,7 @@ model_params:
   monitor: 'loss'
   mode: 'min'
   log_dir: './lightning_logs/'
-  log_every_nsteps: 1000
+  log_every_nsteps: 100
 
   seed : 3407
 
