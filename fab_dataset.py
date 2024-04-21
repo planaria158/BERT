@@ -2,6 +2,15 @@ import torch
 from torch.utils.data import Dataset
 import pandas as pd
 
+#--------------------------------------------------------
+# Code fragments taken from:
+# * https://github.com/barneyhill/minBERT
+# * https://github.com/karpathy/minGPT
+
+# protein sequence data taken from:
+# * https://www.nature.com/articles/s41467-023-39022-2
+# * https://zenodo.org/records/7783546
+#--------------------------------------------------------
 
 class FABSequenceDataset(Dataset):
     """

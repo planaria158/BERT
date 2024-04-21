@@ -3,6 +3,16 @@ from torch import nn
 from pytorch_lightning.core import LightningModule
 from bert_model import BERT
 
+#--------------------------------------------------------
+# Code fragments taken from:
+# * https://github.com/barneyhill/minBERT
+# * https://github.com/karpathy/minGPT
+
+# protein sequence data taken from:
+# * https://www.nature.com/articles/s41467-023-39022-2
+# * https://zenodo.org/records/7783546
+#--------------------------------------------------------
+
 #----------------------------------------------------------
 # Pytorch Lightning Module that hosts the BERT model
 # and runs the training, validation, and testing loops

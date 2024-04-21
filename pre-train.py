@@ -49,7 +49,6 @@ def train(args):
     total_params = sum(param.numel() for param in model.parameters())
     print('Model has:', int(total_params), 'parameters')
 
-
     #--------------------------------------------------------------------
     # Training
     #--------------------------------------------------------------------
