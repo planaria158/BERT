@@ -32,15 +32,21 @@ def train(args):
     #----------------------------------------------------------
     # Load the dataset
     #----------------------------------------------------------
-    train_data_path = './data/mit-ll/mit-ll-AlphaSeq_Antibody_Dataset-a8f64a9/antibody_dataset_2/MITLL_AAlphaBio_Ab_Binding_dataset2.csv'
-    train_dataset = FABSequenceDataset(config, train_data_path, skiprows=6)
+    train_data_path = './data/mit-ll/mit-ll-AlphaSeq_Antibody_Dataset-a8f64a9/antibody_dataset_2/train_set.csv'
+    train_dataset = FABSequenceDataset(config, train_data_path, skiprows=0)
     print(train_dataset.__len__())
     config['vocab_size'] = train_dataset.get_vocab_size()
     config['block_size'] = train_dataset.get_block_size()
     print('config[vocab_size]:', config['vocab_size'], ', config[block_size]:', config['block_size'])
 
+    test_data_path = './data/mit-ll/mit-ll-AlphaSeq_Antibody_Dataset-a8f64a9/antibody_dataset_2/test_set.csv'
+    test_dataset = FABSequenceDataset(config, test_data_path, skiprows=0)
+    print(test_dataset.__len__())
+    config['vocab_size'] = test_dataset.get_vocab_size()
+    config['block_size'] = test_dataset.get_block_size()
+
     train_loader = DataLoader(train_dataset, shuffle=True, pin_memory=True, batch_size=config['batch_size'], num_workers=config['num_workers'])
-    # test_loader = DataLoader(test_dataset, shuffle=False, pin_memory=True, batch_size=config['batch_size'], num_workers=config['num_workers'])
+    test_loader = DataLoader(test_dataset, shuffle=False, pin_memory=True, batch_size=config['batch_size'], num_workers=5)
 
     #----------------------------------------------------------
     # Model
@@ -73,7 +79,7 @@ def train(args):
                          callbacks=[checkpoint_callback])   
 
 
-    trainer.fit(model=model, train_dataloaders=train_loader) #, val_dataloaders=test_loader) )
+    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=test_loader)
     
 
 if __name__ == '__main__':

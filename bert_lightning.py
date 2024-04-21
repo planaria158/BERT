@@ -48,13 +48,10 @@ class BERT_Lightning(LightningModule):
     #     self.y_true = []
     #     self.metrics = None
 
-    # def validation_step(self, batch, batch_idx):
-    #     val_loss, y_hat, y, _, _, _ = self.common_forward(batch, batch_idx)
-    #     self.y_true.extend(y.cpu().numpy().tolist())
-    #     self.y_preds.extend(y_hat.cpu().numpy().tolist())
-    #     self.log_dict({"val_loss": val_loss}, on_epoch=True, on_step=True, prog_bar=True, sync_dist=True)
-    #     self.logger.experiment.add_scalars('loss', {'valid': val_loss}, self.global_step)
-    #     return val_loss
+    def validation_step(self, batch, batch_idx):
+        logits, val_loss = self.common_forward(batch, batch_idx)
+        self.log_dict({"loss": val_loss}, on_epoch=True, on_step=True, prog_bar=True, sync_dist=True)
+        return val_loss
     
     # def on_validation_end(self):
     #     assert(len(self.y_preds) == len(self.y_true))

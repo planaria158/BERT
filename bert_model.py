@@ -269,7 +269,7 @@ class BERT(nn.Module):
         # if we are given some desired targets also calculate the loss
         idx = idx.view(-1)
 
-        # Run in Masked Language Model mode
+        # Run in Masked Language Model (MLM) mode
         if mask is not None:
             mask = mask.view(-1)
             mask_idx = torch.nonzero(mask)

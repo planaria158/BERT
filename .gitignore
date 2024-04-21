@@ -3,3 +3,4 @@ __init__.py
 data/
 lightning_logs/
 nohup.out
+__pycache__/
