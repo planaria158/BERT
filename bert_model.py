@@ -42,8 +42,9 @@ class CausalSelfAttention(nn.Module):
         self.attn_dropout = nn.Dropout(config['attn_pdrop'])
         self.resid_dropout = nn.Dropout(config['resid_pdrop'])
         # causal mask to ensure that attention is only applied to the left in the input sequence
-        self.register_buffer("bias", torch.tril(torch.ones(config['block_size'], config['block_size']))
-                                    .view(1, 1, config['block_size'], config['block_size'])) # Not needed (GPT)
+        # self.register_buffer("bias", torch.tril(torch.ones(config['block_size'], config['block_size']))
+        #                             .view(1, 1, config['block_size'], config['block_size'])) # Not needed for BERT (it's for GPT)
+
         self.n_head = config['n_head']
         self.n_embd = config['n_embd']
         self.block_size = config['block_size']
@@ -135,6 +136,7 @@ class BERT(nn.Module):
         #     }[config['model_type']])
 
         self.transformer = nn.ModuleDict(dict(
+            # class_embedding = nn.Parameter(torch.randn(1, 1, config['n_embd'])),  # TODO wire this up later...
             wte = nn.Embedding(config['vocab_size'], config['n_embd']),
             wpe = nn.Embedding(config['block_size'], config['n_embd']),
             drop = nn.Dropout(config['embd_pdrop']),
@@ -159,6 +161,8 @@ class BERT(nn.Module):
             if module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+        elif isinstance(module, nn.Parameter):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
         elif isinstance(module, nn.LayerNorm):
             torch.nn.init.zeros_(module.bias)

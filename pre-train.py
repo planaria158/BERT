@@ -4,22 +4,21 @@ import argparse
 import pytorch_lightning as pl
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
-from fab_dataset import FABSequenceDataset
+from oas_dataset import OASSequenceDataset as dataset
 from bert_lightning import BERT_Lightning
 
 #----------------------------------------------------------------------
-# This file is for training the BERT model on the FAB sequence data in 
-# Masked Language Model mode. 
+# This file is for pre-training the BERT model on the aa sequence data  
+# running in masked language model mode. 
 # currently training on dual GeForce RTX 2080 Ti with 11GB memory each
 #----------------------------------------------------------------------
 seed = 0
 pl.seed_everything(seed)
 
 def train(args):
-    #
+
     # Read the config
-    #
-    config_path = './config/fab_sequence_data.yaml'  
+    config_path = './config/pretrain_config.yaml'  
     with open(config_path, 'r') as file:
         try:
             config = yaml.safe_load(file)
@@ -32,19 +31,16 @@ def train(args):
     #----------------------------------------------------------
     # Load the dataset
     #----------------------------------------------------------
-    train_data_path = './data/mit-ll/mit-ll-AlphaSeq_Antibody_Dataset-a8f64a9/antibody_dataset_2/train_set.csv'
-    train_dataset = FABSequenceDataset(config, train_data_path, skiprows=0)
+    train_data_path = '/home/mark/dev/myBERT/data/oas/human_light_sars_covid/train_data.pk'
+    train_dataset = dataset(config, train_data_path)
     print(train_dataset.__len__())
     config['vocab_size'] = train_dataset.get_vocab_size()
-    config['block_size'] = train_dataset.get_block_size()
     print('config[vocab_size]:', config['vocab_size'], ', config[block_size]:', config['block_size'])
 
-    test_data_path = './data/mit-ll/mit-ll-AlphaSeq_Antibody_Dataset-a8f64a9/antibody_dataset_2/test_set.csv'
-    test_dataset = FABSequenceDataset(config, test_data_path, skiprows=0)
+    test_data_path = '/home/mark/dev/myBERT/data/oas/human_light_sars_covid/test_data.pk'
+    test_dataset = dataset(config, test_data_path)
     print(test_dataset.__len__())
-    config['vocab_size'] = test_dataset.get_vocab_size()
-    config['block_size'] = test_dataset.get_block_size()
-
+    
     train_loader = DataLoader(train_dataset, shuffle=True, pin_memory=True, batch_size=config['batch_size'], num_workers=config['num_workers'])
     test_loader = DataLoader(test_dataset, shuffle=False, pin_memory=True, batch_size=config['batch_size'], num_workers=5)
 
