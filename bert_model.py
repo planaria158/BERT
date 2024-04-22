@@ -4,6 +4,7 @@ import pytorch_lightning as pl
 from torch import nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
+from einops import repeat
 
 #--------------------------------------------------------
 # Code fragments taken from:
@@ -136,9 +137,8 @@ class BERT(nn.Module):
         #     }[config['model_type']])
 
         self.transformer = nn.ModuleDict(dict(
-            # class_embedding = nn.Parameter(torch.randn(1, 1, config['n_embd'])),  # TODO wire this up later...
             wte = nn.Embedding(config['vocab_size'], config['n_embd']),
-            wpe = nn.Embedding(config['block_size'], config['n_embd']),
+            wpe = nn.Embedding(config['block_size']+1, config['n_embd']),  # +1 is for CLS token
             drop = nn.Dropout(config['embd_pdrop']),
             h = nn.ModuleList([Block(config) for _ in range(config['n_layer'])]),
             ln_f = nn.LayerNorm(config['n_embd']),
@@ -259,7 +259,7 @@ class BERT(nn.Module):
         device = idx.device
         b, t = idx.size()
         assert t <= self.block_size, f"Cannot forward sequence of length {t}, block size is only {self.block_size}"
-        pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0) # shape (1, t)
+        pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0) # shape (1, t) 
 
         # forward the GPT model itself
         tok_emb = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd)
