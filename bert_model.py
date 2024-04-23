@@ -10,13 +10,9 @@ from einops import repeat
 # Code fragments taken from:
 # * https://github.com/barneyhill/minBERT
 # * https://github.com/karpathy/minGPT
-
-# protein sequence data taken from:
-# * https://www.nature.com/articles/s41467-023-39022-2
-# * https://zenodo.org/records/7783546
 #--------------------------------------------------------
 
-
+# TODO: replace with torch.nn.GELU()
 class NewGELU(nn.Module):
     """
     Implementation of the GELU activation function currently in Google BERT repo (identical to OpenAI GPT).
@@ -114,6 +110,116 @@ class BERT(nn.Module):
         print('block_size:', self.block_size)
         print('vocab_size:', self.vocab_size)
 
+        self.transformer = nn.ModuleDict(dict(
+            wte = nn.Embedding(config['vocab_size'], config['n_embd']), # token embedding
+            wpe = nn.Embedding(config['block_size'], config['n_embd']), # position embedding 
+            drop = nn.Dropout(config['embd_pdrop']),
+            h = nn.ModuleList([Block(config) for _ in range(config['n_layer'])]),
+            ln_f = nn.LayerNorm(config['n_embd']),
+        ))
+        self.lm_head = nn.Linear(config['n_embd'], config['vocab_size'], bias=False)
+
+        # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
+        self.apply(self._init_weights)
+        for pn, p in self.named_parameters():
+            if pn.endswith('c_proj.weight'):
+                torch.nn.init.normal_(p, mean=0.0, std=0.02/math.sqrt(2 * config['n_layer']))
+
+        # report number of parameters (note we don't count the decoder parameters in lm_head)
+        n_params = sum(p.numel() for p in self.transformer.parameters())
+        print("number of parameters in transformer: %.2fM" % (n_params/1e6,))
+
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+        elif isinstance(module, nn.Parameter):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+        elif isinstance(module, nn.LayerNorm):
+            torch.nn.init.zeros_(module.bias)
+            torch.nn.init.ones_(module.weight)
+
+
+    def forward(self, idx, mask=None):
+        device = idx.device
+        b, t = idx.size()
+        assert t <= self.block_size, f"Cannot forward sequence of length {t}, block size is only {self.block_size}"
+        pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0) # shape (1, t) 
+
+        # Embeddings and dropout
+        tok_emb = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd)
+        pos_emb = self.transformer.wpe(pos) # position embeddings of shape (1, t, n_embd)
+        x = self.transformer.drop(tok_emb + pos_emb)
+
+        # the Transormer parts
+        for block in self.transformer.h:
+            x = block(x, mask)
+        x = self.transformer.ln_f(x)
+        
+        logits = self.lm_head(x)
+
+        # if we are given some desired targets also calculate the loss
+        idx = idx.view(-1)
+
+        # Run in Masked Language Model (MLM) mode
+        if mask is not None:
+            mask = mask.view(-1)
+            mask_idx = torch.nonzero(mask)
+            loss = F.cross_entropy(logits.view(-1, self.vocab_size),  mask, reduction='none')
+            loss = loss.sum() / mask_idx.shape[0]
+        else:
+            loss = 0
+
+        return logits, loss
+
+    @torch.no_grad()
+    def generate(self, idx, max_new_tokens, mask_token, temperature=1.0, do_sample=False, top_k=None):
+        """
+        Take a conditioning sequence of indices idx (LongTensor of shape (b,t)) and complete
+        the sequence max_new_tokens times, feeding the predictions back into the model each time.
+        Most likely you'll want to make sure to be in model.eval() mode of operation for this.
+        """
+        device = idx.device
+
+        for _ in range(max_new_tokens):
+            # if the sequence context is growing too long we must crop it at block_size
+            idx_cond = idx if idx.size(1) <= self.block_size - 1 else idx[:, -self.block_size+1:]
+
+            mask = torch.cat((torch.zeros_like(idx_cond).to(device), torch.tensor([[mask_token]]).to(device)), 1)
+            idx_cond = torch.cat((idx_cond, torch.tensor([[mask_token]]).to(device)), 1)
+
+            # forward the model to get the logits for the index in the sequence
+            logits, _ = self(idx_cond, mask)
+            # pluck the logits at the final step and scale by desired temperature
+            logits = logits[:, -1, :] / temperature
+            # optionally crop the logits to only the top k options
+            if top_k is not None:
+                v, _ = torch.topk(logits, top_k)
+                logits[logits < v[:, [-1]]] = -float('Inf')
+            # apply softmax to convert logits to (normalized) probabilities
+            probs = F.softmax(logits, dim=-1)
+            # either sample from the distribution or take the most likely element
+
+            if do_sample:
+                idx_next = torch.multinomial(probs, num_samples=1)
+            else:
+                _, idx_next = torch.topk(probs, k=1, dim=-1)
+            # append sampled index to the running sequence and continue
+            idx = torch.cat((idx, idx_next), dim=1)
+
+        return idx
+    
+
+
+    #--------------------------------------------------------
+    # Stuff I commented out from above model code and put here
+    # for future reference
+    #--------------------------------------------------------
+
         # type_given = config['model_type'] is not None
         # params_given = all([config['n_layer'] is not None, config['n_head'] is not None, config['n_embd'] is not None])
         # assert type_given ^ params_given # exactly one of these (XOR)
@@ -136,39 +242,8 @@ class BERT(nn.Module):
         #         'gpt-nano':     dict(n_layer=3, n_head=3, n_embd=48),
         #     }[config['model_type']])
 
-        self.transformer = nn.ModuleDict(dict(
-            wte = nn.Embedding(config['vocab_size'], config['n_embd']), # token embedding
-            wpe = nn.Embedding(config['block_size'], config['n_embd']), # position embedding 
-            drop = nn.Dropout(config['embd_pdrop']),
-            h = nn.ModuleList([Block(config) for _ in range(config['n_layer'])]),
-            ln_f = nn.LayerNorm(config['n_embd']),
-        ))
-        self.lm_head = nn.Linear(config['n_embd'], config['vocab_size'], bias=False)
 
-        # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
-        self.apply(self._init_weights)
-        for pn, p in self.named_parameters():
-            if pn.endswith('c_proj.weight'):
-                torch.nn.init.normal_(p, mean=0.0, std=0.02/math.sqrt(2 * config['n_layer']))
-
-        # report number of parameters (note we don't count the decoder parameters in lm_head)
-        n_params = sum(p.numel() for p in self.transformer.parameters())
-        print("number of parameters: %.2fM" % (n_params/1e6,))
-
-    def _init_weights(self, module):
-        if isinstance(module, nn.Linear):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
-            if module.bias is not None:
-                torch.nn.init.zeros_(module.bias)
-        elif isinstance(module, nn.Embedding):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
-        elif isinstance(module, nn.Parameter):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
-        elif isinstance(module, nn.LayerNorm):
-            torch.nn.init.zeros_(module.bias)
-            torch.nn.init.ones_(module.weight)
-
-    # @classmethod
+        # @classmethod
     # def from_pretrained(cls, model_type):
     #     """
     #     Initialize a pretrained GPT model by copying over the weights
@@ -255,68 +330,4 @@ class BERT(nn.Module):
     #     optimizer = torch.optim.AdamW(optim_groups, lr=train_config['learning_rate'], betas=train_config['betas'])
     #     return optimizer
 
-    def forward(self, idx, mask=None):
-        device = idx.device
-        b, t = idx.size()
-        assert t <= self.block_size, f"Cannot forward sequence of length {t}, block size is only {self.block_size}"
-        pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0) # shape (1, t) 
 
-        # forward the GPT model itself
-        tok_emb = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd)
-        pos_emb = self.transformer.wpe(pos) # position embeddings of shape (1, t, n_embd)
-        x = self.transformer.drop(tok_emb + pos_emb)
-        for block in self.transformer.h:
-            x = block(x, mask)
-        x = self.transformer.ln_f(x)
-        logits = self.lm_head(x)
-
-        # if we are given some desired targets also calculate the loss
-        idx = idx.view(-1)
-
-        # Run in Masked Language Model (MLM) mode
-        if mask is not None:
-            mask = mask.view(-1)
-            mask_idx = torch.nonzero(mask)
-            loss = F.cross_entropy(logits.view(-1, self.vocab_size),  mask, reduction='none')
-            loss = loss.sum() / mask_idx.shape[0]
-        else:
-            loss = 0
-
-        return logits, loss
-
-    @torch.no_grad()
-    def generate(self, idx, max_new_tokens, mask_token, temperature=1.0, do_sample=False, top_k=None):
-        """
-        Take a conditioning sequence of indices idx (LongTensor of shape (b,t)) and complete
-        the sequence max_new_tokens times, feeding the predictions back into the model each time.
-        Most likely you'll want to make sure to be in model.eval() mode of operation for this.
-        """
-        device = idx.device
-
-        for _ in range(max_new_tokens):
-            # if the sequence context is growing too long we must crop it at block_size
-            idx_cond = idx if idx.size(1) <= self.block_size - 1 else idx[:, -self.block_size+1:]
-
-            mask = torch.cat((torch.zeros_like(idx_cond).to(device), torch.tensor([[mask_token]]).to(device)), 1)
-            idx_cond = torch.cat((idx_cond, torch.tensor([[mask_token]]).to(device)), 1)
-
-            # forward the model to get the logits for the index in the sequence
-            logits, _ = self(idx_cond, mask)
-            # pluck the logits at the final step and scale by desired temperature
-            logits = logits[:, -1, :] / temperature
-            # optionally crop the logits to only the top k options
-            if top_k is not None:
-                v, _ = torch.topk(logits, top_k)
-                logits[logits < v[:, [-1]]] = -float('Inf')
-            # apply softmax to convert logits to (normalized) probabilities
-            probs = F.softmax(logits, dim=-1)
-            # either sample from the distribution or take the most likely element
-
-            if do_sample:
-                idx_next = torch.multinomial(probs, num_samples=1)
-            else:
-                _, idx_next = torch.topk(probs, k=1, dim=-1)
-            # append sampled index to the running sequence and continue
-            idx = torch.cat((idx, idx_next), dim=1)
-
-        return idx

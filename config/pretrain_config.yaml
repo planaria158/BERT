@@ -7,7 +7,7 @@ model_params:
   resid_pdrop : 0.1
   attn_pdrop : 0.1
   model_type : 'bert'
-  vocab_size : 22      # 20 amino acids +1 for unknown aa, +1 for mask token, and +1 for CLS token
+  vocab_size : 23      # 20 amino acids +1 for unknown aa, +1 for mask token, and +1 for CLS token
   block_size : 91      # 90 amino acids sequence and +1 for mask token
   mask_prob : 0.15
   weight_decay : 0.1

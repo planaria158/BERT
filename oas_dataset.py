@@ -18,7 +18,7 @@ class OASSequenceDataset(Dataset):
         pk_data = pk.load(open(pk_file_path, 'rb'))
         self.data = list(pk_data)
     
-        # 20 naturally occuring amino acids in human proteins plus MASK token
+        # 20 naturally occuring amino acids in human proteins plus MASK token, 
         # 'X' is a special token for unknown amino acids, and CLS token is for classification
         self.chars = ['CLS', 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y', 'X', '[MASK]']
         print('vocabulary:', self.chars)
