@@ -1,6 +1,5 @@
 __init__.py
 .DS_Store
-data/
 lightning_logs/
 nohup.out
 __pycache__/

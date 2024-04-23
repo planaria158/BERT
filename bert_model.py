@@ -27,7 +27,6 @@ class CausalSelfAttention(nn.Module):
     It is possible to use torch.nn.MultiheadAttention here but I am including an
     explicit implementation here to show that there is nothing too scary here.
     """
-
     def __init__(self, config):
         super().__init__()
         assert config['n_embd'] % config['n_head'] == 0
@@ -48,7 +47,6 @@ class CausalSelfAttention(nn.Module):
 
     def forward(self, x, mask):
         # mask (B (batch_size) x T (seq_len))
-
         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
 
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
@@ -76,8 +74,7 @@ class CausalSelfAttention(nn.Module):
         return y
 
 class Block(nn.Module):
-    """ an unassuming Transformer block """
-
+    """ Transformer block """
     def __init__(self, config):
         super().__init__()
         self.ln_1 = nn.LayerNorm(config['n_embd'])
@@ -100,7 +97,7 @@ class Block(nn.Module):
 
 class BERT(nn.Module):
     """ BERT Language Model """
-
+    
     def __init__(self, config):
         super().__init__()
         assert config['vocab_size'] is not None
