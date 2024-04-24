@@ -1,35 +1,37 @@
 import torch
 from torch import nn
 from pytorch_lightning.core import LightningModule
-from bert_model import BERT
+from fine_bert_model import fineBERT
 
 #----------------------------------------------------------
-# Pytorch Lightning Module that hosts the BERT model
+# Pytorch Lightning Module that hosts the fineBERT model
 # and runs the training, validation, and testing loops
 #----------------------------------------------------------
-class BERT_Lightning(LightningModule):
-    def __init__(self, config):
-        super(BERT_Lightning, self).__init__()
+class fineBERT_Lightning(LightningModule):
+    def __init__(self, config, bert_model):
+        super(fineBERT_Lightning, self).__init__()
         self.config = config
-        self.model = BERT(config)
+        self.model = fineBERT(config, bert_model)
+        self.criterion = nn.MSELoss()
         self.save_hyperparameters()
 
-    def forward(self, x, mask):
-        return self.model(x, mask)
+    def forward(self, x):
+        return self.model(x)
 
-    def common_forward(self, batch, batch_idx):
-        x, mask = batch
-        logits, loss = self.model(x, mask)
+    def common_forward(self, batch):
+        x, y = batch
+        y_hat = self.model(x)
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config['grad_norm_clip'])
-        return logits, loss
+        loss = self.criterion(y_hat, y)
+        return loss, y_hat, y
 
     def training_step(self, batch, batch_idx):
-        _, loss = self.common_forward(batch, batch_idx)
+        loss, _, _ = self.common_forward(batch)
         self.log_dict({"loss": loss}, on_epoch=True, on_step=True, prog_bar=True, sync_dist=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        _, val_loss = self.common_forward(batch, batch_idx)
+        val_loss, _, _ = self.common_forward(batch)
         self.log_dict({"val_loss": val_loss}, on_epoch=True, on_step=True, prog_bar=True, sync_dist=True)
         return val_loss
 

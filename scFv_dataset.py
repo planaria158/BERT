@@ -12,9 +12,9 @@ import pandas as pd
 # * https://zenodo.org/records/7783546
 #--------------------------------------------------------
 
-class FABSequenceDataset(Dataset):
+class scFv_Dataset(Dataset):
     """
-    Emits batches of characters
+    Emits batches of amino acid sequences and binding energies
     """
     def __init__(self, config, csv_file_path, skiprows):  #pk_file_path):
         super().__init__()

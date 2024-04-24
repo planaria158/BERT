@@ -172,6 +172,7 @@ class BERT(nn.Module):
             loss = 0
 
         return logits, loss
+    
 
     @torch.no_grad()
     def generate(self, idx, max_new_tokens, mask_token, temperature=1.0, do_sample=False, top_k=None):
@@ -210,7 +211,6 @@ class BERT(nn.Module):
 
         return idx
     
-
 
     #--------------------------------------------------------
     # Stuff I commented out from above model code and put here

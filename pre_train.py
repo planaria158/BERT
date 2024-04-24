@@ -2,7 +2,6 @@ import os
 import yaml
 import argparse
 import pytorch_lightning as pl
-import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 from oas_dataset import OASSequenceDataset as dataset
 from bert_lightning import BERT_Lightning
@@ -79,9 +78,9 @@ def train(args):
     
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Arguments for BERT training')
+    parser = argparse.ArgumentParser(description='Arguments for pre-training BERT')
     parser.add_argument('--config', dest='config_path',
-                        default='config/fab_sequence_data.yaml', type=str)
+                        default='config/pretrain_config.yaml', type=str)
     args = parser.parse_args()
     train(args)
 
