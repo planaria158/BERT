@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from bert_lightning import BERT_Lightning
 
 """
     Layer class for the MLP
@@ -10,7 +11,7 @@ class Layer(nn.Module):
         self.normalize = normalize
         self.activation = activation
         self.linear = nn.Linear(in_dim, out_dim)
-        self.norm = nn.LayerNorm(out_dim) if normalize else nn.Identity()
+        self.norm = nn.LayerNorm(in_dim) if normalize else nn.Identity()
         self.dropout = nn.Dropout(dropout) if dropout > 0 else nn.Identity() 
         self.activation = nn.ReLU() if activation else nn.Identity()
 
@@ -41,7 +42,7 @@ class MLP(nn.Module):
                 # For regression, the very last Layer has no dropout, normalization, and activation
                 layer = Layer(in_dim, out_dim, normalize=False, activation=False)
             else:
-                layer = Layer(in_dim, out_dim, config['mlp_dropout'])
+                layer = Layer(in_dim, out_dim, config['regress_head_drop'])
             
             layers.append(layer)
 
@@ -55,13 +56,20 @@ class MLP(nn.Module):
 class fineBERT(nn.Module):
     """ fine-tuning version of BERT Language Model """
     
-    def __init__(self, config, bert_model):
+    def __init__(self, config):
         super().__init__()
 
+        # first: Load the pre-trained BERT model
+        assert config['checkpoint_pretrained'] is not None, 'checkpoint_pretrained is None'
+        print('Loading pre-trained BERT model from:', config['checkpoint_pretrained'])
+        path = config['checkpoint_pretrained']
+        bert_model = BERT_Lightning.load_from_checkpoint(checkpoint_path=path, model_config=config)
+        bert_model.freeze()
+
         # pre-trained BERT model
-        self.bert = bert_model
-        for param in self.bert.parameters(): # freeze all bert weights
-            param.requires_grad = False
+        self.bert = bert_model.model
+        # for param in self.bert.parameters(): # freeze all bert weights
+        #     param.requires_grad = False
 
         self.regression_head = MLP(config, config['n_embd'])
         self.regression_head.apply(self._init_weights)
@@ -80,8 +88,8 @@ class fineBERT(nn.Module):
 
 
     def forward(self, x_in):
-        x, _ = self.bert(x_in, mask=None)
-        x = x[:, 0, :]  # pick off the CLS token from bert for regression
+        _, _, tform_out = self.bert(x_in, mask=None)
+        x = tform_out[:, 0, :]  # pick off the CLS token from bert for regression
         logits = self.regression_head(x)
         return logits
 

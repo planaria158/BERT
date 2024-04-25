@@ -8,10 +8,6 @@ from bert_lightning import BERT_Lightning
 from fine_bert_lightning import fineBERT_Lightning
 
 
-
-TODO: under construction.....
-
-
 #----------------------------------------------------------------------
 # This file is for fine-tuning the pre-trainedBERT model on the 
 # scFv sequence, binding energy data.
@@ -35,29 +31,24 @@ def train(args):
     #----------------------------------------------------------
     # Load the dataset
     #----------------------------------------------------------
-    train_data_path = todo  /home/mark/dev/myBERT/data/mit-ll/mit-ll-AlphaSeq_Antibody_Dataset-a8f64a9/antibody_dataset_1  
+    train_data_path = '/home/mark/dev/myBERT/data/mit-ll/mit-ll-AlphaSeq_Antibody_Dataset-a8f64a9/antibody_dataset_1/train_set.csv'
     train_dataset = dataset(config, train_data_path)
     print(train_dataset.__len__())
     config['vocab_size'] = train_dataset.get_vocab_size()
     print('config[vocab_size]:', config['vocab_size'], ', config[block_size]:', config['block_size'])
 
-    test_data_path = todo /home/mark/dev/myBERT/data/mit-ll/mit-ll-AlphaSeq_Antibody_Dataset-a8f64a9/antibody_dataset_1
+    test_data_path = '/home/mark/dev/myBERT/data/mit-ll/mit-ll-AlphaSeq_Antibody_Dataset-a8f64a9/antibody_dataset_1/test_set.csv'
     test_dataset = dataset(config, test_data_path)
     print(test_dataset.__len__())
     
     train_loader = DataLoader(train_dataset, shuffle=True, pin_memory=True, batch_size=config['batch_size'], num_workers=config['num_workers'])
     test_loader = DataLoader(test_dataset, shuffle=False, pin_memory=True, batch_size=config['batch_size'], num_workers=5)
 
+
     #----------------------------------------------------------
     # fine-tune Bert Model
     #----------------------------------------------------------
-    # first: Load the pre-trained BERT model
-    assert config['checkpoint_pretrained_bert_name'] is not None, 'checkpoint_pretrained_bert_name is None'
-    print('Loading pre-trained BERT model from:', config['checkpoint_pretrained_bert_name'])
-    path = config['checkpoint_pretrained_bert_name']
-    bert_model = BERT_Lightning.load_from_checkpoint(checkpoint_path=path, model_config=config)
-
-    model = fineBERT_Lightning(config, bert_model.model) 
+    model = fineBERT_Lightning(config) 
     total_params = sum(param.numel() for param in model.parameters())
     print('Model has:', int(total_params), 'parameters')
 

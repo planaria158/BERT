@@ -1,16 +1,17 @@
 
 model_params:
-  regress_head_pdrop : 0.1
+  n_embd: 512
+  regress_head_drop : 0.1
   vocab_size : 23      # 20 amino acids +1 for unknown aa, +1 for mask token, and +1 for CLS token
   block_size : 91      # 90 amino acids sequence and +1 for mask token
-  mask_prob : 0.15
+  mask_prob : 0.0      # don't mask for fine tuning
   weight_decay : 0.1
   learning_rate : 0.0001
   lr_gamma: 0.9985     # for exponential learning rate decay
   betas : [0.9, 0.95]
   accelerator: 'gpu'
   devices: 2
-  batch_size: 10 #120
+  batch_size: 1024
   num_workers: 20
   grad_norm_clip : 1.0
   num_epochs : 10
@@ -22,7 +23,7 @@ model_params:
   log_every_nsteps: 100
 
   # checkpoint for the pre-trained bert model
-  checkpoint_pretrained_bert_name: None
+  checkpoint_pretrained: '/home/mark/dev/myBERT/lightning_logs/pre-train/checkpoints/epoch=4-step=252700.ckpt'
 
   # checkpoint for entire bert + regress head model
   checkpoint_name: None #'/home/mark/dev/dvm_transformer/lightning_logs/version_16_cleaned_exp2/checkpoints/epoch=86-step=210279.ckpt'

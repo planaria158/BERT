@@ -8,10 +8,10 @@ from fine_bert_model import fineBERT
 # and runs the training, validation, and testing loops
 #----------------------------------------------------------
 class fineBERT_Lightning(LightningModule):
-    def __init__(self, config, bert_model):
+    def __init__(self, config):
         super(fineBERT_Lightning, self).__init__()
         self.config = config
-        self.model = fineBERT(config, bert_model)
+        self.model = fineBERT(config)
         self.criterion = nn.MSELoss()
         self.save_hyperparameters()
 

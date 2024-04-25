@@ -1,6 +1,8 @@
+import math
 import torch
 from torch.utils.data import Dataset
 import pandas as pd
+import numpy as np
 
 #--------------------------------------------------------
 # Code fragments taken from:
@@ -16,26 +18,15 @@ class scFv_Dataset(Dataset):
     """
     Emits batches of amino acid sequences and binding energies
     """
-    def __init__(self, config, csv_file_path, skiprows):  #pk_file_path):
+    def __init__(self, config, csv_file_path, skiprows=0):  
         super().__init__()
         self.config = config
         print('reading the data from:', csv_file_path)
         self.df = pd.read_csv(csv_file_path, skiprows=skiprows)
-        # self.df = pk.load(open(pk_file_path, 'rb'))
         
-        # my_set = set()   
-        # def make_set(x):
-        #     for c in x:
-        #         my_set.add(c)
-
-        # self.df['Sequence'].apply(make_set)
-        # self.chars = sorted(list(my_set)) + ["[MASK]"]
-        # print('len of chars:', len(self.chars))
-        # print('chars:', self.chars)
-    
-        # 20 naturally occuring amino acids in human proteins plus MASK token
-        # 'X' is a special token for unknown amino acids
-        self.chars = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y', 'X', '[MASK]']
+        # 20 naturally occuring amino acids in human proteins plus MASK token, 
+        # 'X' is a special token for unknown amino acids, and CLS token is for classification
+        self.chars = ['CLS', 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y', 'X', '[MASK]']
         print('vocabulary:', self.chars)
 
         data_size, vocab_size = self.df.shape[0], len(self.chars)
@@ -56,25 +47,41 @@ class scFv_Dataset(Dataset):
 
     """ Returns data, mask pairs used for Masked Language Model training """
     def __getitem__(self, idx):
-        # grab a chunk of (block_size) characters from the data
-        # chunk = self.data[idx:idx + self.config['block_size']]
-        chunk = self.df.loc[idx, 'Sequence']
-        
+        seq = self.df.loc[idx, 'Sequence']
+        affinity = self.df.loc[idx, 'Pred_affinity']
+        assert not math.isnan(affinity), 'affinity is nan'
+        assert affinity >= 0.0, 'affinity is negative'
+        assert len(seq) >= self.config['block_size'], 'sequence is too short'
+
+        # get a randomly located block_size-1 substring from the sequence
+        # '-1' so we can prepend the CLS token to the start of the encoded string
+        if len(seq) == self.config['block_size']-1:
+            chunk = seq
+        else:
+            start_idx = np.random.randint(0, len(seq) - (self.config['block_size'] - 1))
+            chunk = seq[start_idx:start_idx + self.config['block_size']-1]
+
         # encode every character to an integer
         dix = torch.tensor([self.stoi[s] for s in chunk], dtype=torch.long)
 
-        # get number of tokens to mask
-        n_pred = max(1, int(round(self.config['block_size']*self.config['mask_prob'])))
+        # prepend the CLS token to the sequence
+        dix = torch.cat((torch.tensor([self.stoi['CLS']], dtype=torch.long), dix))
 
-        # indices of the tokens that will be masked (a random selection of n_pred of the tokens)
-        masked_idx = torch.randperm(self.config['block_size'], dtype=torch.long, )[:n_pred]
+        mask = None
+        if self.config['mask_prob'] > 0:
+            # get number of tokens to mask
+            n_pred = max(1, int(round(self.config['block_size']*self.config['mask_prob'])))
 
-        mask = torch.zeros_like(dix)
+            # indices of the tokens that will be masked (a random selection of n_pred of the tokens)
+            masked_idx = torch.randperm(self.config['block_size']-1, dtype=torch.long, )[:n_pred]
+            masked_idx += 1  # so we never mask the CLS token
 
-        # copy the actual tokens to the mask
-        mask[masked_idx] = dix[masked_idx]
-        
-        # ... and overwrite then with MASK token in the data
-        dix[masked_idx] = self.stoi["[MASK]"]
+            mask = torch.zeros_like(dix)
 
-        return dix, mask 
+            # copy the actual tokens to the mask
+            mask[masked_idx] = dix[masked_idx]
+            
+            # ... and overwrite them with MASK token in the data
+            dix[masked_idx] = self.stoi["[MASK]"]
+
+        return dix, torch.tensor([affinity], dtype=torch.float32) 

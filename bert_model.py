@@ -155,9 +155,9 @@ class BERT(nn.Module):
         # the Transormer parts
         for block in self.transformer.h:
             x = block(x, mask)
-        x = self.transformer.ln_f(x)
+        tform_out = self.transformer.ln_f(x)
         
-        logits = self.lm_head(x)
+        logits = self.lm_head(tform_out)
 
         # if we are given some desired targets also calculate the loss
         idx = idx.view(-1)
@@ -171,7 +171,7 @@ class BERT(nn.Module):
         else:
             loss = 0
 
-        return logits, loss
+        return logits, loss, tform_out
     
 
     @torch.no_grad()

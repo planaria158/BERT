@@ -19,7 +19,7 @@ class BERT_Lightning(LightningModule):
 
     def common_forward(self, batch, batch_idx):
         x, mask = batch
-        logits, loss = self.model(x, mask)
+        logits, loss, tform_out = self.model(x, mask)
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config['grad_norm_clip'])
         return logits, loss
 
