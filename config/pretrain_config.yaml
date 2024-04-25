@@ -6,8 +6,8 @@ model_params:
   embd_pdrop : 0.1
   resid_pdrop : 0.1
   attn_pdrop : 0.1
-  vocab_size : 23      # 20 amino acids +1 for unknown aa, +1 for mask token, and +1 for CLS token
-  block_size : 91      # 90 amino acids sequence and +1 for mask token
+  vocab_size : 24      # 20 amino acids plus, X (unknown aa), MASK, CLS, and PAD tokens
+  block_size : 256     # max 255 amino acids sequence and +1 for mask token
   mask_prob : 0.15
   weight_decay : 0.1
   learning_rate : 0.0001
@@ -15,7 +15,7 @@ model_params:
   betas : [0.9, 0.95]
   accelerator: 'gpu'
   devices: 2
-  batch_size: 120
+  batch_size: 32
   num_workers: 20
   grad_norm_clip : 1.0
   num_epochs : 10
