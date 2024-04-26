@@ -69,8 +69,8 @@ class fineBERT(nn.Module):
         bert_model.freeze()
         self.bert = bert_model.model
 
-        # unfreeze the last two transformer layers for fine-tuning
-        for param in self.bert.transformer['h'][-2:].parameters():
+        # unfreeze some of the transformer layers for fine-tuning
+        for param in self.bert.transformer['h'][-4:].parameters():
             param.requires_grad = True
 
         self.regression_head = MLP(config, config['n_embd'])
