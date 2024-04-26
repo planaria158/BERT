@@ -98,7 +98,7 @@ class Block(nn.Module):
 class BERT(nn.Module):
     """ BERT Language Model """
     
-    def __init__(self, config):
+    def __init__(self, config, load_from_checkpoint=False): 
         super().__init__()
         assert config['vocab_size'] is not None
         assert config['block_size'] is not None
@@ -116,11 +116,15 @@ class BERT(nn.Module):
         ))
         self.lm_head = nn.Linear(config['n_embd'], config['vocab_size'], bias=False)
 
-        # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
-        self.apply(self._init_weights)
-        for pn, p in self.named_parameters():
-            if pn.endswith('c_proj.weight'):
-                torch.nn.init.normal_(p, mean=0.0, std=0.02/math.sqrt(2 * config['n_layer']))
+        if load_from_checkpoint == True :
+            print('BERT, model initialized from pre-trained weights')
+        else:
+            # init all weights, and apply a special scaled init to the residual projections, per GPT-2 paper
+            print('BERT, init model weights, calling self.apply(self._init_weights)')
+            self.apply(self._init_weights)
+            for pn, p in self.named_parameters():
+                if pn.endswith('c_proj.weight'):
+                    torch.nn.init.normal_(p, mean=0.0, std=0.02/math.sqrt(2 * config['n_layer']))
 
         # report number of parameters (note we don't count the decoder parameters in lm_head)
         n_params = sum(p.numel() for p in self.transformer.parameters())
@@ -185,12 +189,12 @@ class BERT(nn.Module):
 
         for _ in range(max_new_tokens):
             # if the sequence context is growing too long we must crop it at block_size
-            idx_cond = idx if idx.size(1) <= self.block_size - 1 else idx[:, -self.block_size+1:]
+            idx_cond = idx if idx.size(1) <= (self.block_size - 1) else idx[:, -self.block_size+1:]
 
             mask = torch.cat((torch.zeros_like(idx_cond).to(device), torch.tensor([[mask_token]]).to(device)), 1)
             idx_cond = torch.cat((idx_cond, torch.tensor([[mask_token]]).to(device)), 1)
 
-            # forward the model to get the logits for the index in the sequence
+            # forward to the model to get the logits for the index in the sequence
             logits, _ = self(idx_cond, mask)
             # pluck the logits at the final step and scale by desired temperature
             logits = logits[:, -1, :] / temperature

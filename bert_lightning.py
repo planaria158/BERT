@@ -8,10 +8,10 @@ from bert_model import BERT
 # and runs the training, validation, and testing loops
 #----------------------------------------------------------
 class BERT_Lightning(LightningModule):
-    def __init__(self, config):
+    def __init__(self, config, load_from_checkpoint=False):
         super(BERT_Lightning, self).__init__()
         self.config = config
-        self.model = BERT(config)
+        self.model = BERT(config, load_from_checkpoint)
         self.save_hyperparameters()
 
     def forward(self, x, mask):

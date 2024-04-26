@@ -63,13 +63,15 @@ class fineBERT(nn.Module):
         assert config['checkpoint_pretrained'] is not None, 'checkpoint_pretrained is None'
         print('Loading pre-trained BERT model from:', config['checkpoint_pretrained'])
         path = config['checkpoint_pretrained']
-        bert_model = BERT_Lightning.load_from_checkpoint(checkpoint_path=path, model_config=config)
-        bert_model.freeze()
 
         # pre-trained BERT model
+        bert_model = BERT_Lightning.load_from_checkpoint(checkpoint_path=path, model_config=config, load_from_checkpoint=True)
+        bert_model.freeze()
         self.bert = bert_model.model
-        # for param in self.bert.parameters(): # freeze all bert weights
-        #     param.requires_grad = False
+
+        # unfreeze the last two transformer layers for fine-tuning
+        for param in self.bert.transformer['h'][-2:].parameters():
+            param.requires_grad = True
 
         self.regression_head = MLP(config, config['n_embd'])
         self.regression_head.apply(self._init_weights)
