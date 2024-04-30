@@ -4,7 +4,6 @@ import argparse
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 from scFv_dataset import scFv_Dataset as dataset
-from bert_lightning import BERT_Lightning
 from fine_bert_lightning import fineBERT_Lightning
 
 
@@ -31,13 +30,13 @@ def train(args):
     #----------------------------------------------------------
     # Load the dataset
     #----------------------------------------------------------
-    train_data_path = '/home/mark/dev/myBERT/data/mit-ll/mit-ll-AlphaSeq_Antibody_Dataset-a8f64a9/antibody_dataset_1/train_set.csv'
+    train_data_path = config['train_data_path']  #'/home/mark/dev/myBERT/data/mit-ll/mit-ll-AlphaSeq_Antibody_Dataset-a8f64a9/antibody_dataset_1/train_set.csv'
     train_dataset = dataset(config, train_data_path)
     print(train_dataset.__len__())
     config['vocab_size'] = train_dataset.get_vocab_size()
     print('config[vocab_size]:', config['vocab_size'], ', config[block_size]:', config['block_size'])
 
-    test_data_path = '/home/mark/dev/myBERT/data/mit-ll/mit-ll-AlphaSeq_Antibody_Dataset-a8f64a9/antibody_dataset_1/test_set.csv'
+    test_data_path = config['test_data_path'] #'/home/mark/dev/myBERT/data/mit-ll/mit-ll-AlphaSeq_Antibody_Dataset-a8f64a9/antibody_dataset_1/test_set.csv'
     test_dataset = dataset(config, test_data_path)
     print(test_dataset.__len__())
     
@@ -67,7 +66,7 @@ def train(args):
     logger = TensorBoardLogger(save_dir=os.getcwd(), name=config['log_dir'], default_hp_metric=False)
 
     print('Using', config['accelerator'])
-    trainer = pl.Trainer(strategy='ddp', 
+    trainer = pl.Trainer(strategy='ddp_find_unused_parameters_true', # 'ddp', 
                          accelerator=config['accelerator'], 
                          devices=config['devices'],
                          max_epochs=config['num_epochs'],   

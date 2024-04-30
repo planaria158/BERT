@@ -6,24 +6,28 @@ model_params:
   embd_pdrop : 0.1
   resid_pdrop : 0.1
   attn_pdrop : 0.1
-  vocab_size : 24      # 20 amino acids plus, X (unknown aa), MASK, CLS, and PAD tokens
-  block_size : 256     # max 255 amino acids sequence and +1 for mask token
+  
+  vocab_size : 25      # 20 amino acids plus, X (unknown aa), MASK, CLS, PAD, and SEP tokens
+  block_size : 248     # max 246 amino acids and +1 for CLS token and +1 for SEP token
   mask_prob : 0.15
-  weight_decay : 0.1
   learning_rate : 0.0001
   lr_gamma: 0.9985     # for exponential learning rate decay
   betas : [0.9, 0.95]
   accelerator: 'gpu'
   devices: 2
-  batch_size: 150
+  batch_size: 200
   num_workers: 20
   grad_norm_clip : 1.0
   num_epochs : 10
   checkpoint_every_n_train_steps : 100
-  save_top_k : 1
+  save_top_k : 5
   monitor: 'loss'
   mode: 'min'
-  log_dir: './lightning_logs/'
+  log_dir: './lightning_logs_alphabio_homework/pretrain_oas/'
   log_every_nsteps: 100
   checkpoint_name: None #'/home/mark/dev/dvm_transformer/lightning_logs/version_16_cleaned_exp2/checkpoints/epoch=86-step=210279.ckpt'
+
+  train_data_path : '/home/mark/dev/myBERT/data/oas/human_light_sars_covid/train_data.pk'
+  test_data_path : '/home/mark/dev/myBERT/data/oas/human_light_sars_covid/test_data.pk'
+
   seed : 3407

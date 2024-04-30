@@ -3,17 +3,15 @@ import yaml
 import argparse
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
-from oas_dataset import OASSequenceDataset as dataset
+from oas_dataset_v2 import OASSequenceDataset_v2 as dataset
 from bert_lightning import BERT_Lightning
 
-#----------------------------------------------------------------------
-# This file is for pre-training the BERT model on the aa sequence data  
-# running in masked language model mode. 
-# currently training on dual GeForce RTX 2080 Ti with 11GB memory each
-#----------------------------------------------------------------------
-seed = 0
-pl.seed_everything(seed)
+"""
+    This file is for pre-training the BERT model on the aa sequence data  
+    running in masked language model mode. 
 
+    currently training on dual GeForce RTX 2080 Ti with 11GB memory each
+"""
 def train(args):
 
     # Read the config
@@ -25,19 +23,18 @@ def train(args):
             print(exc)
 
     config = config['model_params']
+    pl.seed_everything(config['seed'])
     print(config)
 
     #----------------------------------------------------------
     # Load the dataset
     #----------------------------------------------------------
-    train_data_path = '/home/mark/dev/myBERT/data/oas/human_light_sars_covid/train_data.pk'
-    train_dataset = dataset(config, train_data_path)
+    train_dataset = dataset(config, config['train_data_path'])
     print(train_dataset.__len__())
     config['vocab_size'] = train_dataset.get_vocab_size()
     print('config[vocab_size]:', config['vocab_size'], ', config[block_size]:', config['block_size'])
-
-    test_data_path = '/home/mark/dev/myBERT/data/oas/human_light_sars_covid/test_data.pk'
-    test_dataset = dataset(config, test_data_path)
+    
+    test_dataset = dataset(config, config['test_data_path'])
     print(test_dataset.__len__())
     
     train_loader = DataLoader(train_dataset, shuffle=True, pin_memory=True, batch_size=config['batch_size'], num_workers=config['num_workers'])

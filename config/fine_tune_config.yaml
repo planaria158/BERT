@@ -1,29 +1,38 @@
 
 model_params:
   n_embd: 192
-  regress_head_drop : 0.1
+  n_layer: 6
+  n_head : 8
+  embd_pdrop : 0.1
+  resid_pdrop : 0.2
+  attn_pdrop : 0.2
+  regress_head_pdrop : 0.2
+
   vocab_size : 24      # 20 amino acids plus, X (unknown aa), MASK, CLS, and PAD tokens
-  block_size : 256     # max 255 amino acids sequence and +1 for mask token
+  block_size : 247     # max 246 amino acids sequence and +1 for CLS token
   mask_prob : 0.0      # don't mask for fine tuning
-  weight_decay : 0.1
+
   learning_rate : 0.0001
   lr_gamma: 0.9985     # for exponential learning rate decay
   betas : [0.9, 0.95]
   accelerator: 'gpu'
   devices: 2
-  batch_size: 256
+  batch_size: 150
   num_workers: 20
   grad_norm_clip : 1.0
-  num_epochs : 100
+  num_epochs : 1000
   checkpoint_every_n_train_steps : 100
-  save_top_k : 1
+  save_top_k : 5
   monitor: 'loss'
   mode: 'min'
-  log_dir: './lightning_logs/'
+  log_dir: './lightning_logs_alphabio_homework/'
   log_every_nsteps: 10
 
+  train_data_path: '/home/mark/dev/aAlphaBio-Homework/data/train_set.csv'
+  test_data_path:  '/home/mark/dev/aAlphaBio-Homework/data/val_set.csv'
+
   # checkpoint for the pre-trained bert model
-  checkpoint_pretrained: '/home/mark/dev/myBERT/lightning_logs/pre-train/checkpoints/epoch=2-step=116800.ckpt'
+  checkpoint_pretrained: None #'/home/mark/dev/myBERT/lightning_logs/pre-train/checkpoints/epoch=2-step=116800.ckpt'
 
   # checkpoint for entire bert + regress head model
   checkpoint_name: None #'/home/mark/dev/myBERT/lightning_logs/version_2/checkpoints/epoch=61-step=2400.ckpt'

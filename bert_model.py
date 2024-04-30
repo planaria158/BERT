@@ -13,13 +13,13 @@ from einops import repeat
 #--------------------------------------------------------
 
 # TODO: replace with torch.nn.GELU()
-class NewGELU(nn.Module):
-    """
-    Implementation of the GELU activation function currently in Google BERT repo (identical to OpenAI GPT).
-    Reference: Gaussian Error Linear Units (GELU) paper: https://arxiv.org/abs/1606.08415
-    """
-    def forward(self, x):
-        return 0.5 * x * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
+# class NewGELU(nn.Module):
+#     """
+#     Implementation of the GELU activation function currently in Google BERT repo (identical to OpenAI GPT).
+#     Reference: Gaussian Error Linear Units (GELU) paper: https://arxiv.org/abs/1606.08415
+#     """
+#     def forward(self, x):
+#         return 0.5 * x * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
 
 class CausalSelfAttention(nn.Module):
     """
@@ -37,6 +37,7 @@ class CausalSelfAttention(nn.Module):
         # regularization
         self.attn_dropout = nn.Dropout(config['attn_pdrop'])
         self.resid_dropout = nn.Dropout(config['resid_pdrop'])
+
         # causal mask to ensure that attention is only applied to the left in the input sequence
         # self.register_buffer("bias", torch.tril(torch.ones(config['block_size'], config['block_size']))
         #                             .view(1, 1, config['block_size'], config['block_size'])) # Not needed for BERT (it's for GPT)
@@ -58,7 +59,8 @@ class CausalSelfAttention(nn.Module):
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
         att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
         
-        #att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf')) # GPT directional masking
+        # GPT directional masking if we were interested in next-word prediction
+        # att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf')) 
 
         if mask is not None:
             att = att.masked_fill(mask[:, None, None, :] != 0, float('-inf')) # BERT-style masking
@@ -83,7 +85,7 @@ class Block(nn.Module):
         self.mlp = nn.ModuleDict(dict(
             c_fc    = nn.Linear(config['n_embd'], 4 * config['n_embd']),
             c_proj  = nn.Linear(4 * config['n_embd'], config['n_embd']),
-            act     = NewGELU(),
+            act     = nn.GELU(),
             dropout = nn.Dropout(config['resid_pdrop']),
         ))
         m = self.mlp
